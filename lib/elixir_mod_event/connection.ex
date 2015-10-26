@@ -1,6 +1,6 @@
 defmodule FSModEvent.Connection do
   @moduledoc """
-  Connection process. A GenServer that you can plug into your own supervisor
+  Connection process. A Connection that you can plug into your own supervisor
   tree.
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket
@@ -19,9 +19,11 @@ defmodule FSModEvent.Connection do
   limitations under the License.
   """
   alias FSModEvent.Packet, as: Packet
-  use GenServer
+  use Connection
   require Logger
   defstruct name: nil,
+    reconnect: nil,
+    sync: false,
     host: nil,
     port: nil,
     password: nil,
@@ -32,55 +34,61 @@ defmodule FSModEvent.Connection do
     jobs: %{},
     listeners: %{}
 
+  @backoff 2000
+
   @typep t :: %FSModEvent.Connection{}
 
   @doc """
   Registers the caller process as a receiver for all the events for which the
   filter_fun returns true.
   """
-  @spec start_listening(GenServer.server, fun) :: :ok
+  @spec start_listening(Connection.server, fun) :: :ok
   def start_listening(name, filter_fun \\ fn(_) -> true end) do
-    GenServer.cast name, {:start_listening, self, filter_fun}
+    Connection.cast name, {:start_listening, self, filter_fun}
   end
 
   @doc """
   Unregisters the caller process as a listener.
   """
-  @spec stop_listening(GenServer.server) :: :ok
+  @spec stop_listening(Connection.server) :: :ok
   def stop_listening(name) do
-    GenServer.cast name, {:stop_listening, self}
+    Connection.cast name, {:stop_listening, self}
   end
 
   @doc """
   Starts a connection to FreeSWITCH.
   """
   @spec start(
-    atom, String.t, Integer.t, String.t
-  ) :: GenServer.on_start
-  def start(name, host, port, password) do
+    atom, String.t, Integer.t, String.t, boolean
+  ) :: Connection.on_start
+  def start(name, host, port, password, sync, reconnect \\ :false) do
     options = [
       host: host,
       port: port,
       password: password,
-      name: name
+      name: name,
+      sync: sync,
+      reconnect: reconnect
     ]
-    GenServer.start __MODULE__, options, name: name
+    Connection.start __MODULE__, options, name: name
   end
 
   @doc """
   Starts and links a connection to FreeSWITCH.
   """
   @spec start_link(
-    atom, String.t, Integer.t, String.t
-  ) :: GenServer.on_start
-  def start_link(name, host, port, password) do
+    atom, String.t, Integer.t, String.t, boolean
+  ) :: Connection.on_start
+  def start_link(name, host, port, password, sync, reconnect \\ :false) do
     options = [
       host: host,
       port: port,
       password: password,
-      name: name
+      name: name,
+      sync: sync,
+      reconnect: reconnect
     ]
-    GenServer.start_link __MODULE__, options, name: name
+    Connection.start_link __MODULE__, options, name: name
   end
 
   @doc """
@@ -88,7 +96,7 @@ defmodule FSModEvent.Connection do
 
   For a list of available commands see: https://freeswitch.org/confluence/display/FREESWITCH/mod_commands
   """
-  @spec api(GenServer.server, String.t, String.t) :: FSModEvent.Packet.t
+  @spec api(Connection.server, String.t, String.t) :: FSModEvent.Packet.t
   def api(name, command, args \\ "") do
     block_send name, "api #{command} #{args}"
   end
@@ -99,15 +107,15 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-bgapi
   """
-  @spec bgapi(GenServer.server, String.t, String.t) :: String.t
+  @spec bgapi(Connection.server, String.t, String.t) :: String.t
   def bgapi(name, command, args \\ "") do
-    GenServer.call name, {:bgapi, self, command, args}
+    Connection.call name, {:bgapi, self, command, args}
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-linger
   """
-  @spec linger(GenServer.server) :: FSModEvent.Packet.t
+  @spec linger(Connection.server) :: FSModEvent.Packet.t
   def linger(name) do
     block_send name, "linger"
   end
@@ -115,7 +123,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nolinger
   """
-  @spec nolinger(GenServer.server) :: FSModEvent.Packet.t
+  @spec nolinger(Connection.server) :: FSModEvent.Packet.t
   def nolinger(name) do
     block_send name, "nolinger"
   end
@@ -125,7 +133,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-event
   """
-  @spec event(GenServer.server, String.t, String.t) :: FSModEvent.Packet.t
+  @spec event(Connection.server, String.t, String.t) :: FSModEvent.Packet.t
   def event(name, events, format \\ "plain") do
     block_send name, "event #{format} #{events}"
   end
@@ -135,7 +143,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-SpecialCase-'myevents'
   """
-  @spec myevents(GenServer.server, String.t, String.t) :: FSModEvent.Packet.t
+  @spec myevents(Connection.server, String.t, String.t) :: FSModEvent.Packet.t
   def myevents(name, uuid, format \\ "plain") do
     block_send name, "myevents #{format} #{uuid}"
   end
@@ -143,7 +151,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-divert_events
   """
-  @spec enable_divert_events(GenServer.server) :: FSModEvent.Packet.t
+  @spec enable_divert_events(Connection.server) :: FSModEvent.Packet.t
   def enable_divert_events(name) do
     block_send name, "divert_events on"
   end
@@ -151,7 +159,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-divert_events
   """
-  @spec disable_divert_events(GenServer.server) :: FSModEvent.Packet.t
+  @spec disable_divert_events(Connection.server) :: FSModEvent.Packet.t
   def disable_divert_events(name) do
     block_send name, "divert_events off"
   end
@@ -159,7 +167,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-filter
   """
-  @spec filter(GenServer.server, String.t, String.t) :: FSModEvent.Packet.t
+  @spec filter(Connection.server, String.t, String.t) :: FSModEvent.Packet.t
   def filter(name, key, value \\ "") do
     block_send name, "filter #{key} #{value}"
   end
@@ -168,7 +176,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-filterdelete
   """
   @spec filter_delete(
-    GenServer.server, String.t, String.t
+    Connection.server, String.t, String.t
   ) :: FSModEvent.Packet.t
   def filter_delete(name, key, value \\ "") do
     block_send name, "filter delete #{key} #{value}"
@@ -178,7 +186,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendevent
   """
   @spec sendevent(
-    GenServer.server, String.t, [{String.t, String.t}], String.t
+    Connection.server, String.t, [{String.t, String.t}], String.t
   ) :: FSModEvent.Packet.t
   def sendevent(name, event, headers \\ [], body \\ "") do
     length = String.length body
@@ -197,7 +205,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_exec(
-    GenServer.server, String.t, String.t, String.t, Integer.t, String.t
+    Connection.server, String.t, String.t, String.t, Integer.t, String.t
   ) :: FSModEvent.Packet.t
   def sendmsg_exec(name, uuid, command, args \\ "", loops \\ 1, body \\ "") do
     sendmsg name, uuid, "execute", [
@@ -211,7 +219,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_hangup(
-    GenServer.server, String.t, Integer.t
+    Connection.server, String.t, Integer.t
   ) :: FSModEvent.Packet.t
   def sendmsg_hangup(name, uuid, cause \\ 16) do
     sendmsg name, uuid, "hangup", [{"hangup-cause", to_string(cause)}]
@@ -221,7 +229,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_unicast(
-    GenServer.server, String.t, String.t, String.t,
+    Connection.server, String.t, String.t, String.t,
     String.t, Integer.t, String.t, Integer.t
   ) :: FSModEvent.Packet.t
   def sendmsg_unicast(
@@ -243,7 +251,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_nomedia(
-    GenServer.server, String.t, String.t
+    Connection.server, String.t, String.t
   ) :: FSModEvent.Packet.t
   def sendmsg_nomedia(name, uuid, info \\ "") do
     sendmsg name, uuid, "nomedia", [{"nomedia-uuid", info}]
@@ -252,7 +260,7 @@ defmodule FSModEvent.Connection do
   @doc """
   https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-exit
   """
-  @spec exit(GenServer.server) :: FSModEvent.Packet.t
+  @spec exit(Connection.server) :: FSModEvent.Packet.t
   def exit(name) do
     block_send name, "exit"
   end
@@ -260,7 +268,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-log
   """
-  @spec log(GenServer.server, String.t) :: FSModEvent.Packet.t
+  @spec log(Connection.server, String.t) :: FSModEvent.Packet.t
   def log(name, level) do
     block_send name, "log #{level}"
   end
@@ -268,7 +276,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nolog
   """
-  @spec nolog(GenServer.server) :: FSModEvent.Packet.t
+  @spec nolog(Connection.server) :: FSModEvent.Packet.t
   def nolog(name) do
     block_send name, "nolog"
   end
@@ -278,7 +286,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nixevent
   """
-  @spec nixevent(GenServer.server, String.t) :: FSModEvent.Packet.t
+  @spec nixevent(Connection.server, String.t) :: FSModEvent.Packet.t
   def nixevent(name, events) do
     block_send name, "nixevent #{events}"
   end
@@ -286,30 +294,77 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-noevents
   """
-  @spec noevents(GenServer.server) :: FSModEvent.Packet.t
+  @spec noevents(Connection.server) :: FSModEvent.Packet.t
   def noevents(name) do
     block_send name, "noevents"
   end
 
-  @spec init([term]) :: {:ok, FSModEvent.Connection.t} | no_return
+  @spec init([term]) :: {:connect, :starting, FSModEvent.Connection.t} | no_return
   def init(options) do
-    Logger.info "Starting FS connection"
-    {:ok, socket} = :gen_tcp.connect(
-      to_char_list(options[:host]), options[:port], [
-        packet: 0, sndbuf: 4194304, recbuf: 4194304, active: :once, mode: :binary
-      ]
-    )
-    {:ok, %FSModEvent.Connection{
+    {:connect, :starting, %FSModEvent.Connection{
       name: options[:name],
       host: options[:host],
       port: options[:port],
+      reconnect: options[:reconnect],
+      sync: options[:sync],
       password: options[:password],
-      socket: socket,
+      socket: nil,
       buffer: "",
       sender: nil,
-      state: :connecting,
+      state: :disconnected,
       jobs: %{}
     }}
+  end
+
+  def connect(:starting, state) do
+    Logger.info "Starting FS connection"
+    res = :gen_tcp.connect(
+      to_char_list(state.host), state.port, [
+        packet: 0, sndbuf: 4194304, recbuf: 4194304, active: :once, mode: :binary
+      ]
+    )
+
+    case res do
+      {:ok, socket} -> 
+        Logger.debug "Connected to FreeSWITCH: #{inspect socket}"
+        {:ok, %FSModEvent.Connection{state | socket: socket, state: :connecting}}
+      reason -> 
+        Logger.error "Cannot connect, reason: #{inspect reason}"
+        if %FSModEvent.Connection{reconnect: :true} = state do
+          {:backoff, @backoff, %{state | socket: nil, state: :disconnected}}
+        else
+          {:stop, reason, %{state | socket: nil, state: :disconnected}}
+        end
+    end
+  end
+
+  def connect(:backoff, state = %FSModEvent.Connection{reconnect: :true}) do
+    connect(:starting, %{state | state: :disconnected})
+  end
+
+  def connect(:backoff, state = %FSModEvent.Connection{reconnect: :false}) do
+    {:stop, :normal, %{state | state: :disconnected}}
+  end
+
+  def connect(what, state) do
+    raise "Unhandled connection info #{inspect what} with state #{inspect state}"
+  end
+
+  def disconnect(:disconnect, state = %FSModEvent.Connection{reconnect: :true}) do
+    Logger.info "disconnected from FreeSWITCH, retrying..."
+    Enum.each state.listeners, fn({_, v}) ->
+      send v.pid, {:fs_event, :fs_down}
+    end
+    {:backoff, @backoff, %{state | state: :disconnected}}
+  end
+
+  def disconnect(:disconnect, state = %FSModEvent.Connection{reconnect: :false}) do
+    Logger.info "disconnected from FreeSWITCH, stopping."
+    {:stop, :normal, %{state | state: :disconnected}}
+  end
+
+  def disconnect(what, state) do
+    raise "Unhandled disconnection info #{inspect what} with state #{inspect state}"
   end
 
   @spec handle_call(
@@ -371,7 +426,7 @@ defmodule FSModEvent.Connection do
 
   def handle_info({:tcp_closed, _}, state) do
     Logger.info "Connection closed"
-    {:stop, :normal, state}
+    {:disconnect, :disconnect, state}
   end
 
   def handle_info(message, state) do
@@ -405,6 +460,9 @@ defmodule FSModEvent.Connection do
     state = %FSModEvent.Connection{state: :connecting}
   ) do
     if pkt.success do
+      Enum.each state.listeners, fn({_, v}) ->
+        send v.pid, {:fs_event, :fs_up}
+      end
       %FSModEvent.Connection{state | state: :connected}
     else
       raise "Could not login to FS: #{inspect pkt}"
@@ -420,7 +478,7 @@ defmodule FSModEvent.Connection do
       # Command immediate response
       Packet.is_response?(pkt) ->
         if not is_nil state.sender do
-          GenServer.reply state.sender, pkt
+          Connection.reply state.sender, pkt
         end
       # Regular event
       true ->
@@ -433,7 +491,7 @@ defmodule FSModEvent.Connection do
         # Notify listeners
         Enum.each state.listeners, fn({_, v}) ->
           if v.filter.(pkt) do
-            send v.pid, {:fs_event, pkt}
+            send_listener v.pid, {:fs_event, pkt}, state
           end
         end
     end
@@ -467,7 +525,7 @@ defmodule FSModEvent.Connection do
   end
 
   defp block_send(name, command) do
-    GenServer.call name, {:send, command}
+    Connection.call name, {:send, command}
   end
 
   defp cmd_send(socket, command) do
@@ -475,4 +533,12 @@ defmodule FSModEvent.Connection do
     Logger.debug "Sending #{c}"
     :ok = :gen_tcp.send socket, c
   end
+
+  defp send_listener(pid, data, state) do
+    case state.sync do
+      :true -> GenServer.call pid, data
+      _ -> send pid, data
+    end
+  end
+
 end
