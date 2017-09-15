@@ -44,7 +44,7 @@ defmodule FSModEvent.Connection do
   """
   @spec start_listening(Connection.server, fun) :: :ok
   def start_listening(name, filter_fun \\ fn(_) -> true end) do
-    Connection.cast name, {:start_listening, self, filter_fun}
+    Connection.cast name, {:start_listening, self(), filter_fun}
   end
 
   @doc """
@@ -52,7 +52,7 @@ defmodule FSModEvent.Connection do
   """
   @spec stop_listening(Connection.server) :: :ok
   def stop_listening(name) do
-    Connection.cast name, {:stop_listening, self}
+    Connection.cast name, {:stop_listening, self()}
   end
 
   @doc """
@@ -109,7 +109,7 @@ defmodule FSModEvent.Connection do
   """
   @spec bgapi(Connection.server, String.t, String.t) :: String.t
   def bgapi(name, command, args \\ "") do
-    Connection.call name, {:bgapi, self, command, args}
+    Connection.call name, {:bgapi, self(), command, args}
   end
 
   @doc """

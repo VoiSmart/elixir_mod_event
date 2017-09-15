@@ -5,14 +5,14 @@ defmodule FSModEvent.Mixfile do
     [
       app: :elixir_mod_event,
       name: "elixir_mod_event",
-      version: "0.0.5",
-      description: description,
-      package: package,
+      version: "0.0.10",
+      description: description(),
+      package: package(),
       source_url: "https://github.com/marcelog/elixir_mod_event",
       elixir: "~> 1.0",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps
+      deps: deps()
     ]
   end
 
@@ -32,7 +32,7 @@ Find the user guide in the github repo at: https://github.com/marcelog/elixir_mo
 
   defp package do
     [
-      files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Marcelo Gornstein"],
       licenses: ["Apache 2.0"],
       links: %{
@@ -43,12 +43,12 @@ Find the user guide in the github repo at: https://github.com/marcelog/elixir_mo
 
   defp deps do
     [
-      {:earmark, "~> 0.1", only: :dev},
-      {:ex_doc, "~> 0.7", only: :dev},
-      {:coverex, "~> 1.4.1", only: :test},
+      {:earmark, "~> 1.0.3", only: :dev},
+      {:ex_doc, "~> 0.14.5", only: :dev},
+      {:coverex, "~> 1.4.12", only: :test},
       {:connection, "1.0.1"},
       {:jiffy, git: "https://github.com/davisp/jiffy.git", tag: "0.14.3"},
-      {:uuid, "~> 1.0"}
+      {:uuid, "~> 1.1.6"}
     ]
   end
 end
