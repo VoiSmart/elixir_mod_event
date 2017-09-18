@@ -32,6 +32,7 @@ defmodule FSModEvent.Connection do
     state: nil,
     sender: nil,
     jobs: %{},
+    max_attempts: nil,
     listeners: %{}
 
   @backoff 2000
@@ -61,14 +62,15 @@ defmodule FSModEvent.Connection do
   @spec start(
     atom, String.t, Integer.t, String.t, boolean
   ) :: Connection.on_start
-  def start(name, host, port, password, sync, reconnect \\ :false) do
+  def start(name, host, port, password, sync, reconnect \\ :false, max_attempts \\ nil) do
     options = [
       host: host,
       port: port,
       password: password,
       name: name,
       sync: sync,
-      reconnect: reconnect
+      reconnect: reconnect,
+      max_attempts: max_attempts
     ]
     Connection.start __MODULE__, options, name: name
   end
@@ -79,14 +81,15 @@ defmodule FSModEvent.Connection do
   @spec start_link(
     atom, String.t, Integer.t, String.t, boolean
   ) :: Connection.on_start
-  def start_link(name, host, port, password, sync, reconnect \\ :false) do
+  def start_link(name, host, port, password, sync, reconnect \\ :false, max_attempts \\ nil) do
     options = [
       host: host,
       port: port,
       password: password,
       name: name,
       sync: sync,
-      reconnect: reconnect
+      reconnect: reconnect,
+      max_attempts: max_attempts
     ]
     Connection.start_link __MODULE__, options, name: name
   end
@@ -311,6 +314,7 @@ defmodule FSModEvent.Connection do
       socket: nil,
       buffer: "",
       sender: nil,
+      max_attempts: options[:max_attempts],
       state: :disconnected,
       jobs: %{}
     }}
@@ -325,16 +329,12 @@ defmodule FSModEvent.Connection do
     )
 
     case res do
-      {:ok, socket} -> 
+      {:ok, socket} ->
         Logger.debug "Connected to FreeSWITCH: #{inspect socket}"
         {:ok, %FSModEvent.Connection{state | socket: socket, state: :connecting}}
-      reason -> 
+      reason ->
         Logger.error "Cannot connect, reason: #{inspect reason}"
-        if %FSModEvent.Connection{reconnect: :true} = state do
-          {:backoff, @backoff, %{state | socket: nil, state: :disconnected}}
-        else
-          {:stop, reason, %{state | socket: nil, state: :disconnected}}
-        end
+        do_reconnect(state, reason)
     end
   end
 
@@ -539,6 +539,21 @@ defmodule FSModEvent.Connection do
       :true -> GenServer.call pid, data
       _ -> send pid, data
     end
+  end
+
+  defp do_reconnect(state = %FSModEvent.Connection{reconnect: :true, max_attempts: nil}, _reason) do
+    {:backoff, @backoff, %{state | socket: nil, state: :disconnected}}
+  end
+
+  defp do_reconnect(state = %FSModEvent.Connection{reconnect: :true}, reason) do
+    case state.max_attempts - 1 do
+      attempts when attempts <= 0 -> {:stop, reason, %{state | socket: nil, state: :disconnected}}
+      attempts -> {:backoff, @backoff, %{state | socket: nil, state: :disconnected, max_attempts: attempts}}
+    end
+  end
+
+  defp do_reconnect(state, reason) do
+    {:stop, reason, %{state | socket: nil, state: :disconnected}}
   end
 
 end
