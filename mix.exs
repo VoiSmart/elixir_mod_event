@@ -48,6 +48,7 @@ Find the user guide in the github repo at: https://github.com/marcelog/elixir_mo
       {:coverex, "~> 1.4.12", only: :test},
       {:connection, "~> 1.0"},
       {:jiffy, "~> 0.14.11"},
+      {:backoff, "~> 1.1"},
       {:uuid, "~> 1.1.6"}
     ]
   end

@@ -35,7 +35,7 @@ defmodule FSModEvent.Connection do
     max_attempts: nil,
     listeners: %{}
 
-  @backoff 2000
+  @max_reconnection_delay 10
 
   @typep t :: %FSModEvent.Connection{}
 
@@ -330,7 +330,7 @@ defmodule FSModEvent.Connection do
     Enum.each state.listeners, fn({_, v}) ->
       send v.pid, {:fs_event, :fs_down}
     end
-    {:backoff, @backoff, %{state | state: :disconnected}}
+    {:backoff, calculate_backoff(1), %{state | state: :disconnected}}
   end
 
   def disconnect(:disconnect, state = %FSModEvent.Connection{reconnect: :false}) do
@@ -517,18 +517,25 @@ defmodule FSModEvent.Connection do
   end
 
   defp do_reconnect(state = %FSModEvent.Connection{reconnect: :true, max_attempts: nil}, _reason) do
-    {:backoff, @backoff, %{state | socket: nil, state: :disconnected}}
+    {:backoff, calculate_backoff(1), %{state | socket: nil, state: :disconnected}}
   end
 
   defp do_reconnect(state = %FSModEvent.Connection{reconnect: :true}, reason) do
     case state.max_attempts - 1 do
-      attempts when attempts <= 0 -> {:stop, reason, %{state | socket: nil, state: :disconnected}}
-      attempts -> {:backoff, @backoff, %{state | socket: nil, state: :disconnected, max_attempts: attempts}}
+      attempts when attempts <= 0 ->
+        {:stop, reason, %{state | socket: nil, state: :disconnected}}
+      attempts ->
+        backoff_time = calculate_backoff(attempts)
+        {:backoff, backoff_time, %{state | socket: nil, state: :disconnected, max_attempts: attempts}}
     end
   end
 
   defp do_reconnect(state, reason) do
     {:stop, reason, %{state | socket: nil, state: :disconnected}}
+  end
+
+  defp calculate_backoff(attempt) do
+    :backoff.rand_increment(attempt, @max_reconnection_delay) * 1000 # in ms
   end
 
 end
