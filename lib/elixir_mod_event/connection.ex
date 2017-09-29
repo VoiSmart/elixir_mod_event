@@ -28,8 +28,8 @@ defmodule FSModEvent.Connection do
     port: nil,
     password: nil,
     socket: nil,
-    buffer: '',
-    state: nil,
+    buffer: "",
+    state: :disconnected,
     sender: nil,
     jobs: %{},
     max_attempts: nil,
@@ -59,39 +59,27 @@ defmodule FSModEvent.Connection do
   @doc """
   Starts a connection to FreeSWITCH.
   """
-  @spec start(
-    atom, String.t, Integer.t, String.t, boolean
-  ) :: Connection.on_start
-  def start(name, host, port, password, sync, reconnect \\ :false, max_attempts \\ nil) do
-    options = [
-      host: host,
-      port: port,
-      password: password,
-      name: name,
-      sync: sync,
-      reconnect: reconnect,
-      max_attempts: max_attempts
-    ]
-    Connection.start __MODULE__, options, name: name
+  @spec start(map()) :: Connection.on_start
+  def start(conf) do
+    Connection.start __MODULE__, conf
+  end
+
+  @spec start(atom, map()) :: Connection.on_start
+  def start(name, conf) do
+    Connection.start __MODULE__, conf, name: name
   end
 
   @doc """
   Starts and links a connection to FreeSWITCH.
   """
-  @spec start_link(
-    atom, String.t, Integer.t, String.t, boolean
-  ) :: Connection.on_start
-  def start_link(name, host, port, password, sync, reconnect \\ :false, max_attempts \\ nil) do
-    options = [
-      host: host,
-      port: port,
-      password: password,
-      name: name,
-      sync: sync,
-      reconnect: reconnect,
-      max_attempts: max_attempts
-    ]
-    Connection.start_link __MODULE__, options, name: name
+  @spec start_link(map()) :: Connection.on_start
+  def start_link(conf) do
+    Connection.start_link __MODULE__, conf
+  end
+
+  @spec start_link(atom, map()) :: Connection.on_start
+  def start_link(name, conf) do
+    Connection.start_link __MODULE__, conf, name: name
   end
 
   @doc """
@@ -303,28 +291,15 @@ defmodule FSModEvent.Connection do
   end
 
   @spec init([term]) :: {:connect, :starting, FSModEvent.Connection.t} | no_return
-  def init(options) do
-    {:connect, :starting, %FSModEvent.Connection{
-      name: options[:name],
-      host: options[:host],
-      port: options[:port],
-      reconnect: options[:reconnect],
-      sync: options[:sync],
-      password: options[:password],
-      socket: nil,
-      buffer: "",
-      sender: nil,
-      max_attempts: options[:max_attempts],
-      state: :disconnected,
-      jobs: %{}
-    }}
+  def init(conf) do
+    {:connect, :starting, struct(FSModEvent.Connection, conf)}
   end
 
   def connect(:starting, state) do
     Logger.info "Starting FS connection"
     res = :gen_tcp.connect(
       to_char_list(state.host), state.port, [
-        packet: 0, sndbuf: 4194304, recbuf: 4194304, active: :once, mode: :binary
+        packet: 0, sndbuf: 4_194_304, recbuf: 4_194_304, active: :once, mode: :binary
       ]
     )
 
