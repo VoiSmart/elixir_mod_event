@@ -33,6 +33,7 @@ defmodule FSModEvent.Connection do
     sender: nil,
     jobs: %{},
     max_attempts: nil,
+    auto_connect: true,
     listeners: %{}
 
   @max_reconnection_delay 10
@@ -292,7 +293,11 @@ defmodule FSModEvent.Connection do
 
   @spec init([term]) :: {:connect, :starting, FSModEvent.Connection.t} | no_return
   def init(conf) do
-    {:connect, :starting, struct(FSModEvent.Connection, conf)}
+    conf_struct = struct(FSModEvent.Connection, conf)
+    case conf_struct.auto_connect do
+      true -> {:connect, :starting, conf_struct}
+      false -> {:ok, conf_struct}
+    end
   end
 
   def connect(:starting, state) do
@@ -377,6 +382,10 @@ defmodule FSModEvent.Connection do
     key = Base.encode64 :erlang.term_to_binary(caller)
     listeners = Map.delete state.listeners, key
     {:noreply, %FSModEvent.Connection{state | listeners: listeners}}
+  end
+
+  def handle_cast({:connect}, state) do
+    {:connect, :starting, state}
   end
 
   def handle_cast(cast, state) do
