@@ -458,28 +458,26 @@ defmodule FSModEvent.Connection do
   end
 
   defp process(pkt, state) do
-    cond do
+    new_state = cond do
       # Command immediate response
       Packet.is_response?(pkt) ->
         if not is_nil state.sender do
           Connection.reply state.sender, pkt
         end
+        state
       # Regular event
       true ->
         # Background job response
-        if not is_nil pkt.job_id do
-          if not is_nil state.jobs[pkt.job_id] do
-            send state.jobs[pkt.job_id], {:fs_job_result, pkt.job_id, pkt}
-          end
-        end
+        bg_state = is_background_job(state, pkt)
         # Notify listeners
         Enum.each state.listeners, fn({_, v}) ->
           if v.filter.(pkt) do
             send_listener v.pid, {:fs_event, pkt}, state
           end
         end
+        bg_state
     end
-    %FSModEvent.Connection{state | sender: nil}
+    %FSModEvent.Connection{new_state | sender: nil}
   end
 
   defp auth(socket, password) do
@@ -545,6 +543,19 @@ defmodule FSModEvent.Connection do
 
   defp calculate_backoff(attempt) do
     :backoff.rand_increment(attempt, @max_reconnection_delay) * 1000 # in ms
+  end
+
+  defp is_background_job(state, %FSModEvent.Packet{job_id: nil}) do
+    state
+  end
+  defp is_background_job(state, pkt) do
+    if not is_nil state.jobs[pkt.job_id] do
+      send state.jobs[pkt.job_id], {:fs_job_result, pkt.job_id, pkt}
+      new_jobs = Map.delete(state.jobs, pkt.job_id)
+      %{state | jobs: new_jobs}
+    else
+      state
+    end
   end
 
 end
