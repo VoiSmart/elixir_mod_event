@@ -530,10 +530,10 @@ defmodule FSModEvent.Connection do
   defp do_reconnect(state = %FSModEvent.Connection{reconnect: :true}, reason) do
     case state.max_attempts - 1 do
       attempts when attempts <= 0 ->
-        {:stop, reason, %{state | socket: nil, state: :disconnected}}
+        {:stop, reason, %FSModEvent.Connection{state | socket: nil, state: :disconnected}}
       attempts ->
         backoff_time = calculate_backoff(attempts)
-        {:backoff, backoff_time, %{state | socket: nil, state: :disconnected, max_attempts: attempts}}
+        {:backoff, backoff_time, %FSModEvent.Connection{state | socket: nil, state: :disconnected, max_attempts: attempts}}
     end
   end
 
@@ -552,7 +552,7 @@ defmodule FSModEvent.Connection do
     if not is_nil state.jobs[pkt.job_id] do
       send state.jobs[pkt.job_id], {:fs_job_result, pkt.job_id, pkt}
       new_jobs = Map.delete(state.jobs, pkt.job_id)
-      %{state | jobs: new_jobs}
+      %FSModEvent.Connection{state | jobs: new_jobs}
     else
       state
     end
