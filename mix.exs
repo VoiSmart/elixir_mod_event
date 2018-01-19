@@ -24,9 +24,9 @@ defmodule FSModEvent.Mixfile do
 
   defp description do
     """
-Elixir client for FreeSWITCH mod_event_socket.
+    Elixir client for FreeSWITCH mod_event_socket.
 
-Find the user guide in the github repo at: https://github.com/marcelog/elixir_mod_event.
+    Find the user guide in the github repo at: https://github.com/marcelog/elixir_mod_event.
     """
   end
 
