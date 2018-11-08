@@ -83,10 +83,6 @@ defmodule FSModEvent.Packet do
     end
   end
 
-  defp headers(pkt) do
-    %FSModEvent.Packet{pkt | parse_error: true}
-  end
-
   defp payload(
          pkt = %FSModEvent.Packet{
            parse_error: false,
