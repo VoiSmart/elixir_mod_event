@@ -39,7 +39,7 @@ defmodule FSModEvent.Content do
           Map.put(
             acc,
             key,
-            :erlang.list_to_binary(:http_uri.decode(:erlang.binary_to_list(value)))
+            URI.decode(value)
           )
 
         case rest do
