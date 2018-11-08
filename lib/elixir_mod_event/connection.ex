@@ -352,7 +352,7 @@ defmodule FSModEvent.Connection do
 
     case res do
       {:ok, socket} ->
-        Logger.debug("Connected to FreeSWITCH: #{inspect(socket)}")
+        Logger.debug(fn -> "Connected to FreeSWITCH: #{inspect(socket)}" end)
         {:ok, %FSModEvent.Connection{state | socket: socket, state: :connecting}}
 
       reason ->
@@ -512,30 +512,34 @@ defmodule FSModEvent.Connection do
 
   defp process(pkt, state) do
     new_state =
-      cond do
-        # Command immediate response
-        Packet.is_response?(pkt) ->
+      case Packet.is_response?(pkt) do
+        true ->
+          # Command immediate response
           if not is_nil(state.sender) do
             Connection.reply(state.sender, pkt)
           end
 
           state
 
-        # Regular event
-        true ->
+        false ->
+          # Regular event
           # Background job response
           bg_state = is_background_job(state, pkt)
           # Notify listeners
-          Enum.each(state.listeners, fn {_, v} ->
-            if v.filter.(pkt) do
-              send_listener(v.pid, {:fs_event, pkt}, state)
-            end
-          end)
+          do_notify(state, pkt)
 
           bg_state
       end
 
     %FSModEvent.Connection{new_state | sender: nil}
+  end
+
+  defp do_notify(state, pkt) do
+    Enum.each(state.listeners, fn {_, v} ->
+      if v.filter.(pkt) do
+        send_listener(v.pid, {:fs_event, pkt}, state)
+      end
+    end)
   end
 
   defp auth(socket, password) do
@@ -576,7 +580,7 @@ defmodule FSModEvent.Connection do
 
   defp cmd_send(socket, command) do
     c = "#{command}\n\n"
-    Logger.debug("Sending #{c}")
+    Logger.debug(fn -> "Sending #{c}" end)
     :ok = :gen_tcp.send(socket, c)
   end
 
@@ -618,12 +622,12 @@ defmodule FSModEvent.Connection do
   end
 
   defp is_background_job(state, pkt) do
-    if not is_nil(state.jobs[pkt.job_id]) do
+    if is_nil(state.jobs[pkt.job_id]) do
+      state
+    else
       send(state.jobs[pkt.job_id], {:fs_job_result, pkt.job_id, pkt})
       new_jobs = Map.delete(state.jobs, pkt.job_id)
       %FSModEvent.Connection{state | jobs: new_jobs}
-    else
-      state
     end
   end
 end

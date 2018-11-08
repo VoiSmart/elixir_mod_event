@@ -54,14 +54,12 @@ defmodule FSModEvent.Content do
   end
 
   defp event_json(data) do
-    try do
-      r = :jiffy.decode(data, [:return_maps])
-      {custom, r} = Map.pop(r, "_body")
-      {r, custom}
-    catch
-      {:error, reason} ->
-        Logger.warn("Cannot decode json: #{inspect(reason)}")
-        nil
-    end
+    r = :jiffy.decode(data, [:return_maps])
+    {custom, r} = Map.pop(r, "_body")
+    {r, custom}
+  catch
+    {:error, reason} ->
+      Logger.warn("Cannot decode json: #{inspect(reason)}")
+      nil
   end
 end
