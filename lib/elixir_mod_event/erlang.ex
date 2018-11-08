@@ -175,9 +175,9 @@ defmodule FSModEvent.Erlang do
         ) :: :ok | no_return
   def sendmsg_exec(name, uuid, command, args \\ "", loops \\ 1) do
     sendmsg(name, uuid, 'execute', [
-      {'execute-app-name', to_char_list(command)},
-      {'execute-app-arg', to_char_list(args)},
-      {'loops', to_char_list(loops)}
+      {'execute-app-name', to_charlist(command)},
+      {'execute-app-arg', to_charlist(args)},
+      {'loops', to_charlist(loops)}
     ])
   end
 
@@ -186,7 +186,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec sendmsg_hangup(node, String.t(), Integer.t()) :: :ok | no_return
   def sendmsg_hangup(name, uuid, cause \\ 16) do
-    sendmsg(name, uuid, 'hangup', [{'hangup-cause', to_char_list(cause)}])
+    sendmsg(name, uuid, 'hangup', [{'hangup-cause', to_charlist(cause)}])
   end
 
   @doc """
@@ -213,12 +213,12 @@ defmodule FSModEvent.Erlang do
         remote_port \\ 8026
       ) do
     sendmsg(name, uuid, 'unicast', [
-      {'local-ip', to_char_list(local_ip)},
-      {'local-port', to_char_list(local_port)},
-      {'remote-ip', to_char_list(remote_ip)},
-      {'remote-port', to_char_list(remote_port)},
-      {'transport', to_char_list(transport)},
-      {'flags', to_char_list(flags)}
+      {'local-ip', to_charlist(local_ip)},
+      {'local-port', to_charlist(local_port)},
+      {'remote-ip', to_charlist(remote_ip)},
+      {'remote-port', to_charlist(remote_port)},
+      {'transport', to_charlist(transport)},
+      {'flags', to_charlist(flags)}
     ])
   end
 
@@ -227,7 +227,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec sendmsg_nomedia(node, String.t(), String.t()) :: FSModEvent.Packet.t()
   def sendmsg_nomedia(node, uuid, info \\ "") do
-    sendmsg(node, uuid, :nomedia, [{'nomedia-uuid', to_char_list(info)}])
+    sendmsg(node, uuid, :nomedia, [{'nomedia-uuid', to_charlist(info)}])
   end
 
   @doc """
@@ -302,7 +302,7 @@ defmodule FSModEvent.Erlang do
 
   defp sendmsg(node, uuid, command, headers) do
     headers = [{'call-command', command} | headers]
-    run(node, :sendmsg, {:sendmsg, to_char_list(uuid), headers})
+    run(node, :sendmsg, {:sendmsg, to_charlist(uuid), headers})
   end
 
   defp run(node, command, payload \\ nil, timeout \\ @timeout) do

@@ -341,7 +341,7 @@ defmodule FSModEvent.Connection do
 
     res =
       :gen_tcp.connect(
-        to_char_list(state.host),
+        to_charlist(state.host),
         state.port,
         packet: 0,
         sndbuf: 4_194_304,
