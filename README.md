@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/marcelog/elixir_mod_event.svg)](https://travis-ci.org/marcelog/elixir_mod_event)
+[![Build Status](https://travis-ci.org/VoiSmart/elixir_mod_event.svg)](https://travis-ci.org/VoiSmart/elixir_mod_event)
 
 # elixir_mod_event
 Elixir client for the [FreeSWITCH mod_event_socket](https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket).
@@ -13,7 +13,7 @@ To use it in your Mix projects, first add it as a dependency:
 
 ```elixir
 def deps do
-  [{:elixir_mod_event, "~> 0.0.6"}]
+  [{:elixir_mod_event, "~> 0.0.10"}]
 end
 ```
 Then run mix deps.get to install it.
