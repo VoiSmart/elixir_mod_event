@@ -29,9 +29,9 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-api
   """
-  @spec api(node, String.t, String.t) :: String.t | no_return
+  @spec api(node, String.t(), String.t()) :: String.t() | no_return
   def api(node, command, args \\ "") do
-    run node, :api, {:api, String.to_atom(command), args}
+    run(node, :api, {:api, String.to_atom(command), args})
   end
 
   @doc """
@@ -46,24 +46,30 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-bgapi
   """
-  @spec bgapi(node, String.t, String.t) :: String.t | no_return
+  @spec bgapi(node, String.t(), String.t()) :: String.t() | no_return
   def bgapi(node, command, args \\ "", timeout \\ @timeout) do
     caller = self()
-    spawn fn ->
-      job_id = run node, :bgapi, {:bgapi, String.to_atom(command), args}
-      send caller, {:fs_job_id, job_id}
+
+    spawn(fn ->
+      job_id = run(node, :bgapi, {:bgapi, String.to_atom(command), args})
+      send(caller, {:fs_job_id, job_id})
+
       receive do
         {status, ^job_id, x} ->
-          status = if status === :bgok do
-            :ok
-          else
-            :error
-          end
-          send caller, {:fs_job_result, job_id, status, x}
-      after timeout ->
-        send caller, {:fs_job_result, job_id, :error, :timeout}
+          status =
+            if status === :bgok do
+              :ok
+            else
+              :error
+            end
+
+          send(caller, {:fs_job_result, job_id, status, x})
+      after
+        timeout ->
+          send(caller, {:fs_job_result, job_id, :error, :timeout})
       end
-    end
+    end)
+
     receive do
       {:fs_job_id, job_id} -> job_id
     end
@@ -77,7 +83,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec register_log_handler(node) :: :ok | no_return
   def register_log_handler(node) do
-    run node, :foo, :register_log_handler
+    run(node, :foo, :register_log_handler)
   end
 
   @doc """
@@ -85,12 +91,12 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-event
   """
-  @spec event(node, String.t, String.t) :: :ok | no_return
+  @spec event(node, String.t(), String.t()) :: :ok | no_return
   def event(node, event, value \\ nil) do
-    if is_nil value do
-      run node, :foo, {:event, String.to_atom(event)}
+    if is_nil(value) do
+      run(node, :foo, {:event, String.to_atom(event)})
     else
-      run node, :foo, {:event, String.to_atom(event), String.to_atom(value)}
+      run(node, :foo, {:event, String.to_atom(event), String.to_atom(value)})
     end
   end
 
@@ -99,12 +105,12 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-nixevent
   """
-  @spec nixevent(node, String.t, String.t) :: :ok | no_return
+  @spec nixevent(node, String.t(), String.t()) :: :ok | no_return
   def nixevent(node, event, value \\ nil) do
-    if is_nil value do
-      run node, :foo, {:nixevent, String.to_atom(event)}
+    if is_nil(value) do
+      run(node, :foo, {:nixevent, String.to_atom(event)})
     else
-      run node, :foo, {:nixevent, String.to_atom(event), String.to_atom(value)}
+      run(node, :foo, {:nixevent, String.to_atom(event), String.to_atom(value)})
     end
   end
 
@@ -116,7 +122,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec register_event_handler(node) :: :ok | no_return
   def register_event_handler(node) do
-    run node, :foo, :register_event_handler
+    run(node, :foo, :register_event_handler)
   end
 
   @doc """
@@ -124,9 +130,9 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-set_log_level
   """
-  @spec set_log_level(node, String.t) :: :ok | no_return
+  @spec set_log_level(node, String.t()) :: :ok | no_return
   def set_log_level(node, level) do
-    run node, :foo, {:set_log_level, String.to_atom(level)}
+    run(node, :foo, {:set_log_level, String.to_atom(level)})
   end
 
   @doc """
@@ -136,7 +142,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec nolog(node) :: :ok | no_return
   def nolog(node) do
-    run node, :nolog
+    run(node, :nolog)
   end
 
   @doc """
@@ -146,67 +152,82 @@ defmodule FSModEvent.Erlang do
   """
   @spec exit(node) :: :ok | no_return
   def exit(node) do
-    run node, :exit
+    run(node, :exit)
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendevent
   """
-  @spec sendevent(node, String.t, [{String.t, String.t}]) :: :ok | no_return
+  @spec sendevent(node, String.t(), [{String.t(), String.t()}]) :: :ok | no_return
   def sendevent(node, event, headers) do
-    run node, :sendevent, {:sendevent, event, headers}
+    run(node, :sendevent, {:sendevent, event, headers})
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendmsg
   """
   @spec sendmsg_exec(
-    node, String.t, String.t, String.t, Integer.t
-  ) :: :ok | no_return
+          node,
+          String.t(),
+          String.t(),
+          String.t(),
+          Integer.t()
+        ) :: :ok | no_return
   def sendmsg_exec(name, uuid, command, args \\ "", loops \\ 1) do
-    sendmsg name, uuid, 'execute', [
+    sendmsg(name, uuid, 'execute', [
       {'execute-app-name', to_char_list(command)},
       {'execute-app-arg', to_char_list(args)},
       {'loops', to_char_list(loops)}
-    ]
+    ])
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendmsg
   """
-  @spec sendmsg_hangup(node, String.t, Integer.t) :: :ok | no_return
+  @spec sendmsg_hangup(node, String.t(), Integer.t()) :: :ok | no_return
   def sendmsg_hangup(name, uuid, cause \\ 16) do
-    sendmsg name, uuid, 'hangup', [{'hangup-cause', to_char_list(cause)}]
+    sendmsg(name, uuid, 'hangup', [{'hangup-cause', to_char_list(cause)}])
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendmsg
   """
   @spec sendmsg_unicast(
-    node, String.t, String.t, String.t,
-    String.t, Integer.t, String.t, Integer.t
-  ) :: FSModEvent.Packet.t
+          node,
+          String.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          Integer.t(),
+          String.t(),
+          Integer.t()
+        ) :: FSModEvent.Packet.t()
   def sendmsg_unicast(
-    name, uuid, transport \\ "tcp", flags \\ "native",
-    local_ip \\ "127.0.0.1", local_port \\ 8025,
-    remote_ip \\ "127.0.0.1", remote_port \\ 8026
-  ) do
-    sendmsg name, uuid, 'unicast', [
+        name,
+        uuid,
+        transport \\ "tcp",
+        flags \\ "native",
+        local_ip \\ "127.0.0.1",
+        local_port \\ 8025,
+        remote_ip \\ "127.0.0.1",
+        remote_port \\ 8026
+      ) do
+    sendmsg(name, uuid, 'unicast', [
       {'local-ip', to_char_list(local_ip)},
       {'local-port', to_char_list(local_port)},
       {'remote-ip', to_char_list(remote_ip)},
       {'remote-port', to_char_list(remote_port)},
       {'transport', to_char_list(transport)},
       {'flags', to_char_list(flags)}
-    ]
+    ])
   end
 
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendmsg
   """
-  @spec sendmsg_nomedia(node, String.t, String.t) :: FSModEvent.Packet.t
+  @spec sendmsg_nomedia(node, String.t(), String.t()) :: FSModEvent.Packet.t()
   def sendmsg_nomedia(node, uuid, info \\ "") do
-    sendmsg node, uuid, :nomedia, [{'nomedia-uuid', to_char_list(info)}]
+    sendmsg(node, uuid, :nomedia, [{'nomedia-uuid', to_char_list(info)}])
   end
 
   @doc """
@@ -215,12 +236,12 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-handlecall
   """
-  @spec handlecall(node, String.t, atom) :: :ok | no_return
+  @spec handlecall(node, String.t(), atom) :: :ok | no_return
   def handlecall(node, uuid, process \\ nil) do
-    if is_nil process do
-      run node, :handlecall, {:handlecall, uuid}
+    if is_nil(process) do
+      run(node, :handlecall, {:handlecall, uuid})
     else
-      run node, :handlecall, {:handlecall, uuid, process}
+      run(node, :handlecall, {:handlecall, uuid, process})
     end
   end
 
@@ -241,9 +262,9 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-XMLsearchbindings
   """
-  @spec config_bind(node, String.t) :: :ok | no_return
+  @spec config_bind(node, String.t()) :: :ok | no_return
   def config_bind(node, type) do
-    run node, :bind, {:bind, String.to_atom(type)}
+    run(node, :bind, {:bind, String.to_atom(type)})
   end
 
   @doc """
@@ -253,9 +274,9 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-XMLsearchbindings
   """
-  @spec config_reply(node, String.t, String.t) :: :ok | no_return
+  @spec config_reply(node, String.t(), String.t()) :: :ok | no_return
   def config_reply(node, fetch_id, xml) do
-    run node, :send, {:fetch_reply, fetch_id, xml}
+    run(node, :send, {:fetch_reply, fetch_id, xml})
   end
 
   @doc """
@@ -266,7 +287,7 @@ defmodule FSModEvent.Erlang do
   """
   @spec pid(atom) :: pid | no_return
   def pid(node) do
-    run node, :getpid
+    run(node, :getpid)
   end
 
   @doc """
@@ -276,28 +297,32 @@ defmodule FSModEvent.Erlang do
   """
   @spec noevents(atom) :: pid | no_return
   def noevents(node) do
-    run node, :noevents
+    run(node, :noevents)
   end
 
   defp sendmsg(node, uuid, command, headers) do
-    headers = [{'call-command', command}|headers]
-    run node, :sendmsg, {:sendmsg, to_char_list(uuid), headers}
+    headers = [{'call-command', command} | headers]
+    run(node, :sendmsg, {:sendmsg, to_char_list(uuid), headers})
   end
 
   defp run(node, command, payload \\ nil, timeout \\ @timeout) do
-    payload = if is_nil payload do
-      command
-    else
-      payload
-    end
-    send {command, node}, payload
+    payload =
+      if is_nil(payload) do
+        command
+      else
+        payload
+      end
+
+    send({command, node}, payload)
+
     receive do
       {:ok, x} -> x
       :ok -> :ok
-      {:error, x} -> raise FSModEvent.Erlang.Error, message: "#{inspect x}"
+      {:error, x} -> raise FSModEvent.Erlang.Error, message: "#{inspect(x)}"
       :error -> raise FSModEvent.Erlang.Error, message: "unknown error"
-    after timeout ->
-      raise FSModEvent.Erlang.Error, message: "timeout"
+    after
+      timeout ->
+        raise FSModEvent.Erlang.Error, message: "timeout"
     end
   end
 end

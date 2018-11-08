@@ -21,42 +21,47 @@ defmodule FSModEvent.Content do
   @doc """
   Will parse and return a payload according to the content type given.
   """
-  @spec parse(String.t, char_list) :: term
+  @spec parse(String.t(), char_list) :: term
   def parse("text/event-plain", data) do
-    event_plain data, %{}
+    event_plain(data, %{})
   end
 
-  @spec parse(String.t, char_list) :: term
+  @spec parse(String.t(), char_list) :: term
   def parse("text/event-json", data) do
-    event_json data
+    event_json(data)
   end
 
   def parse(_, data), do: {data, nil}
 
   defp event_plain(data, acc) do
-    case Header.parse data do
+    case Header.parse(data) do
       {key, value, rest} ->
-        acc = Map.put acc, key, :erlang.list_to_binary(
-          :http_uri.decode(:erlang.binary_to_list(value))
-        )
+        acc =
+          Map.put(
+            acc,
+            key,
+            :erlang.list_to_binary(:http_uri.decode(:erlang.binary_to_list(value)))
+          )
+
         case rest do
-          "\n" <> rest ->  {acc, rest}
-          _ -> event_plain rest, acc
+          "\n" <> rest -> {acc, rest}
+          _ -> event_plain(rest, acc)
         end
-      _error -> nil
+
+      _error ->
+        nil
     end
   end
 
   defp event_json(data) do
     try do
-        r = :jiffy.decode(data,  [:return_maps])
-        {custom, r} = Map.pop r, "_body"
-        {r, custom}
+      r = :jiffy.decode(data, [:return_maps])
+      {custom, r} = Map.pop(r, "_body")
+      {r, custom}
     catch
-        {:error, reason} -> 
-            Logger.warn "Cannot decode json: #{inspect reason}"
-            nil
+      {:error, reason} ->
+        Logger.warn("Cannot decode json: #{inspect(reason)}")
+        nil
     end
   end
-
 end

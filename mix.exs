@@ -10,8 +10,8 @@ defmodule FSModEvent.Mixfile do
       package: package(),
       source_url: "https://github.com/marcelog/elixir_mod_event",
       elixir: "~> 1.0",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
   end
