@@ -43,13 +43,13 @@ defmodule FSModEvent.Mixfile do
 
   defp deps do
     [
-      {:earmark, "~> 1.0.3", only: :dev},
-      {:ex_doc, "~> 0.14.5", only: :dev},
-      {:coverex, "~> 1.4.12", only: :test},
+      {:earmark, "~> 1.0", only: :dev},
+      {:ex_doc, "~> 0.14", only: :dev},
+      {:coverex, "~> 1.4", only: :test},
       {:connection, "~> 1.0"},
-      {:jiffy, "~> 0.14.11"},
+      {:jiffy, "~> 0.14"},
       {:backoff, "~> 1.1"},
-      {:uuid, "~> 1.1.6"}
+      {:uuid, "~> 1.1"}
     ]
   end
 end
