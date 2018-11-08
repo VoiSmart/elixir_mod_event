@@ -45,7 +45,7 @@ defmodule FSModEvent.Packet do
   Parses all packets found in the given input buffer. Returns a tuple with the
   buffer leftovers and the packets parsed.
   """
-  @spec parse(charlist, [FSModEvent.Packet.t()]) :: {charlist, [FSModEvent.Packet.t()]}
+  @spec parse(binary(), [FSModEvent.Packet.t()]) :: {binary(), [FSModEvent.Packet.t()]}
   def parse(char_list, acc \\ []) do
     pkt = parse_real(char_list)
 
@@ -60,9 +60,9 @@ defmodule FSModEvent.Packet do
     %FSModEvent.Packet{
       rest: data
     }
-    |> headers
-    |> payload
-    |> normalize
+    |> headers()
+    |> payload()
+    |> normalize()
   end
 
   defp headers(pkt = %FSModEvent.Packet{parse_error: false}) do

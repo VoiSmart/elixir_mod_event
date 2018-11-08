@@ -91,7 +91,7 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-event
   """
-  @spec event(node, String.t(), String.t()) :: :ok | no_return
+  @spec event(node(), String.t(), String.t() | nil) :: :ok | no_return
   def event(node, event, value \\ nil) do
     if is_nil(value) do
       run(node, :foo, {:event, String.to_atom(event)})
@@ -105,7 +105,7 @@ defmodule FSModEvent.Erlang do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-nixevent
   """
-  @spec nixevent(node, String.t(), String.t()) :: :ok | no_return
+  @spec nixevent(node(), String.t(), String.t() | nil) :: :ok | no_return
   def nixevent(node, event, value \\ nil) do
     if is_nil(value) do
       run(node, :foo, {:nixevent, String.to_atom(event)})
@@ -171,7 +171,7 @@ defmodule FSModEvent.Erlang do
           String.t(),
           String.t(),
           String.t(),
-          Integer.t()
+          pos_integer()
         ) :: :ok | no_return
   def sendmsg_exec(name, uuid, command, args \\ "", loops \\ 1) do
     sendmsg(name, uuid, 'execute', [
@@ -184,7 +184,7 @@ defmodule FSModEvent.Erlang do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_erlang_event#mod_erlang_event-sendmsg
   """
-  @spec sendmsg_hangup(node, String.t(), Integer.t()) :: :ok | no_return
+  @spec sendmsg_hangup(node, String.t(), pos_integer()) :: :ok | no_return
   def sendmsg_hangup(name, uuid, cause \\ 16) do
     sendmsg(name, uuid, 'hangup', [{'hangup-cause', to_charlist(cause)}])
   end
@@ -198,9 +198,9 @@ defmodule FSModEvent.Erlang do
           String.t(),
           String.t(),
           String.t(),
-          Integer.t(),
+          pos_integer(),
           String.t(),
-          Integer.t()
+          pos_integer()
         ) :: FSModEvent.Packet.t()
   def sendmsg_unicast(
         name,

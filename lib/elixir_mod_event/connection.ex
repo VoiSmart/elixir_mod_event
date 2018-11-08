@@ -39,13 +39,13 @@ defmodule FSModEvent.Connection do
 
   @max_reconnection_delay 10
 
-  @typep t :: %FSModEvent.Connection{}
+  @type t :: %FSModEvent.Connection{}
 
   @doc """
   Registers the caller process as a receiver for all the events for which the
   filter_fun returns true.
   """
-  @spec start_listening(Connection.server(), fun) :: :ok
+  @spec start_listening(GenServer.server(), fun) :: :ok
   def start_listening(name, filter_fun \\ fn _ -> true end) do
     Connection.cast(name, {:start_listening, self(), filter_fun})
   end
@@ -53,7 +53,7 @@ defmodule FSModEvent.Connection do
   @doc """
   Unregisters the caller process as a listener.
   """
-  @spec stop_listening(Connection.server()) :: :ok
+  @spec stop_listening(GenServer.server()) :: :ok
   def stop_listening(name) do
     Connection.cast(name, {:stop_listening, self()})
   end
@@ -61,12 +61,12 @@ defmodule FSModEvent.Connection do
   @doc """
   Starts a connection to FreeSWITCH.
   """
-  @spec start(map()) :: Connection.on_start()
+  @spec start(map()) :: GenServer.on_start()
   def start(conf) do
     Connection.start(__MODULE__, conf)
   end
 
-  @spec start(atom, map()) :: Connection.on_start()
+  @spec start(atom, map()) :: GenServer.on_start()
   def start(name, conf) do
     Connection.start(__MODULE__, conf, name: name)
   end
@@ -74,12 +74,12 @@ defmodule FSModEvent.Connection do
   @doc """
   Starts and links a connection to FreeSWITCH.
   """
-  @spec start_link(map()) :: Connection.on_start()
+  @spec start_link(map()) :: GenServer.on_start()
   def start_link(conf) do
     Connection.start_link(__MODULE__, conf)
   end
 
-  @spec start_link(atom, map()) :: Connection.on_start()
+  @spec start_link(atom, map()) :: GenServer.on_start()
   def start_link(name, conf) do
     Connection.start_link(__MODULE__, conf, name: name)
   end
@@ -89,7 +89,7 @@ defmodule FSModEvent.Connection do
 
   For a list of available commands see: https://freeswitch.org/confluence/display/FREESWITCH/mod_commands
   """
-  @spec api(Connection.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
+  @spec api(GenServer.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
   def api(name, command, args \\ "") do
     block_send(name, "api #{command} #{args}")
   end
@@ -100,7 +100,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-bgapi
   """
-  @spec bgapi(Connection.server(), String.t(), String.t()) :: String.t()
+  @spec bgapi(GenServer.server(), String.t(), String.t()) :: String.t()
   def bgapi(name, command, args \\ "") do
     Connection.call(name, {:bgapi, self(), command, args})
   end
@@ -108,7 +108,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-linger
   """
-  @spec linger(Connection.server()) :: FSModEvent.Packet.t()
+  @spec linger(GenServer.server()) :: FSModEvent.Packet.t()
   def linger(name) do
     block_send(name, "linger")
   end
@@ -116,7 +116,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nolinger
   """
-  @spec nolinger(Connection.server()) :: FSModEvent.Packet.t()
+  @spec nolinger(GenServer.server()) :: FSModEvent.Packet.t()
   def nolinger(name) do
     block_send(name, "nolinger")
   end
@@ -126,7 +126,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-event
   """
-  @spec event(Connection.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
+  @spec event(GenServer.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
   def event(name, events, format \\ "plain") do
     block_send(name, "event #{format} #{events}")
   end
@@ -136,7 +136,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-SpecialCase-'myevents'
   """
-  @spec myevents(Connection.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
+  @spec myevents(GenServer.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
   def myevents(name, uuid, format \\ "plain") do
     block_send(name, "myevents #{format} #{uuid}")
   end
@@ -144,7 +144,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-divert_events
   """
-  @spec enable_divert_events(Connection.server()) :: FSModEvent.Packet.t()
+  @spec enable_divert_events(GenServer.server()) :: FSModEvent.Packet.t()
   def enable_divert_events(name) do
     block_send(name, "divert_events on")
   end
@@ -152,7 +152,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-divert_events
   """
-  @spec disable_divert_events(Connection.server()) :: FSModEvent.Packet.t()
+  @spec disable_divert_events(GenServer.server()) :: FSModEvent.Packet.t()
   def disable_divert_events(name) do
     block_send(name, "divert_events off")
   end
@@ -160,7 +160,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-filter
   """
-  @spec filter(Connection.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
+  @spec filter(GenServer.server(), String.t(), String.t()) :: FSModEvent.Packet.t()
   def filter(name, key, value \\ "") do
     block_send(name, "filter #{key} #{value}")
   end
@@ -169,7 +169,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-filterdelete
   """
   @spec filter_delete(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
           String.t()
         ) :: FSModEvent.Packet.t()
@@ -181,7 +181,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendevent
   """
   @spec sendevent(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
           [{String.t(), String.t()}],
           String.t()
@@ -206,11 +206,11 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_exec(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
           String.t(),
           String.t(),
-          Integer.t(),
+          pos_integer(),
           String.t()
         ) :: FSModEvent.Packet.t()
   def sendmsg_exec(name, uuid, command, args \\ "", loops \\ 1, body \\ "") do
@@ -231,9 +231,9 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_hangup(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
-          Integer.t()
+          non_neg_integer()
         ) :: FSModEvent.Packet.t()
   def sendmsg_hangup(name, uuid, cause \\ 16) do
     sendmsg(name, uuid, "hangup", [{"hangup-cause", to_string(cause)}])
@@ -243,14 +243,14 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_unicast(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
           String.t(),
           String.t(),
           String.t(),
-          Integer.t(),
+          pos_integer(),
           String.t(),
-          Integer.t()
+          pos_integer()
         ) :: FSModEvent.Packet.t()
   def sendmsg_unicast(
         name,
@@ -276,7 +276,7 @@ defmodule FSModEvent.Connection do
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-sendmsg
   """
   @spec sendmsg_nomedia(
-          Connection.server(),
+          GenServer.server(),
           String.t(),
           String.t()
         ) :: FSModEvent.Packet.t()
@@ -287,7 +287,7 @@ defmodule FSModEvent.Connection do
   @doc """
   https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-exit
   """
-  @spec exit(Connection.server()) :: FSModEvent.Packet.t()
+  @spec exit(GenServer.server()) :: FSModEvent.Packet.t()
   def exit(name) do
     block_send(name, "exit")
   end
@@ -295,7 +295,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-log
   """
-  @spec log(Connection.server(), String.t()) :: FSModEvent.Packet.t()
+  @spec log(GenServer.server(), String.t()) :: FSModEvent.Packet.t()
   def log(name, level) do
     block_send(name, "log #{level}")
   end
@@ -303,7 +303,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nolog
   """
-  @spec nolog(Connection.server()) :: FSModEvent.Packet.t()
+  @spec nolog(GenServer.server()) :: FSModEvent.Packet.t()
   def nolog(name) do
     block_send(name, "nolog")
   end
@@ -313,7 +313,7 @@ defmodule FSModEvent.Connection do
 
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-nixevent
   """
-  @spec nixevent(Connection.server(), String.t()) :: FSModEvent.Packet.t()
+  @spec nixevent(GenServer.server(), String.t()) :: FSModEvent.Packet.t()
   def nixevent(name, events) do
     block_send(name, "nixevent #{events}")
   end
@@ -321,7 +321,7 @@ defmodule FSModEvent.Connection do
   @doc """
   See: https://freeswitch.org/confluence/display/FREESWITCH/mod_event_socket#mod_event_socket-noevents
   """
-  @spec noevents(Connection.server()) :: FSModEvent.Packet.t()
+  @spec noevents(GenServer.server()) :: FSModEvent.Packet.t()
   def noevents(name) do
     block_send(name, "noevents")
   end

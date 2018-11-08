@@ -21,12 +21,11 @@ defmodule FSModEvent.Content do
   @doc """
   Will parse and return a payload according to the content type given.
   """
-  @spec parse(String.t(), charlist) :: term
+  @spec parse(String.t(), binary()) :: term
   def parse("text/event-plain", data) do
     event_plain(data, %{})
   end
 
-  @spec parse(String.t(), charlist) :: term
   def parse("text/event-json", data) do
     event_json(data)
   end
