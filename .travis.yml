@@ -7,3 +7,6 @@ otp_release:
   - 20.3
   - 21.0
   - 21.1
+
+script:
+  - "MIX_ENV=test mix do deps.get, deps.compile, credo --strict, test"
