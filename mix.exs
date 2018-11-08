@@ -18,7 +18,7 @@ defmodule FSModEvent.Mixfile do
 
   def application do
     [
-      applications: [:logger]
+      extra_applications: [:logger]
     ]
   end
 
