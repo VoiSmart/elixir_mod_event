@@ -1,4 +1,6 @@
 defmodule FSModEvent.Test.Packet do
+  @moduledoc false
+
   use ExUnit.Case, async: true
   alias FSModEvent.Packet, as: Packet
   require Logger
