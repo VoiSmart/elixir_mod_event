@@ -511,27 +511,27 @@ defmodule FSModEvent.Connection do
   end
 
   defp process(pkt, state) do
-    new_state =
-      case Packet.is_response?(pkt) do
-        true ->
-          # Command immediate response
-          if not is_nil(state.sender) do
-            Connection.reply(state.sender, pkt)
-          end
+    case Packet.is_response?(pkt) do
+      true ->
+        # Command immediate response
+        case state.sender do
+          nil ->
+            state
 
-          state
+          sender ->
+            Connection.reply(sender, pkt)
+            %{state | sender: nil}
+        end
 
-        false ->
-          # Regular event
-          # Background job response
-          bg_state = is_background_job(state, pkt)
-          # Notify listeners
-          do_notify(state, pkt)
+      false ->
+        # Regular event
+        # Background job response
+        bg_state = is_background_job(state, pkt)
+        # Notify listeners
+        do_notify(state, pkt)
 
-          bg_state
-      end
-
-    %FSModEvent.Connection{new_state | sender: nil}
+        bg_state
+    end
   end
 
   defp do_notify(state, pkt) do
