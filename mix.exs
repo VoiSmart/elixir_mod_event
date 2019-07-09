@@ -48,7 +48,7 @@ defmodule FSModEvent.Mixfile do
       {:ex_doc, "~> 0.14", only: :dev},
       {:coverex, "~> 1.4", only: :test},
       {:connection, "~> 1.0"},
-      {:jiffy, "~> 0.14"},
+      {:jiffy, "~> 1.0"},
       {:backoff, "~> 1.1"},
       {:uuid, "~> 1.1"},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
