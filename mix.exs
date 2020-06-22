@@ -50,9 +50,9 @@ defmodule FSModEvent.Mixfile do
       {:connection, "~> 1.0"},
       {:jiffy, "~> 1.0"},
       {:backoff, "~> 1.1"},
-      {:uuid, "~> 1.1"},
-      {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
-      {:credo, "~> 1.0.0-rc1", only: [:dev, :test], runtime: false}
+      {:elixir_uuid, "~> 1.2"},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:credo, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 end
